@@ -1,0 +1,89 @@
+Parameters:
+  <<: !Include '../organization-parameters.yml'
+
+  # AWS SSO instance ARN
+  instanceArn:
+    Type: String
+    Default: <<aws-sso-instance-arn>>
+
+  # Principal ID from Identity Provider's group used by administrators
+  adminGroup:
+    Type: String
+    Default: <<admin-group-id>>
+
+  # Principal ID from Identity Provider's group used by developers
+  devGroup:
+    Type: String
+    Default: <<dev-group-id>>
+
+  # Principal ID from Identity Provider's group used by security admins
+  securityGroup:
+    Type: String
+    Default: <<security-admin-group-id>>
+
+  # Principal ID from Identity Provider's group used by security admins
+  incidentResponseGroup:
+    Type: String
+    Default: <<incident-response-group-id>>
+
+SsoAdministrator:
+  Type: update-stacks
+  Template: ./aws-sso-admin.yml
+  StackName: !Sub '${resourcePrefix}-sso-admin'
+  StackDescription: 'Full permission role used by Admin group within whole organization'
+  TerminationProtection: false
+  DefaultOrganizationBindingRegion: eu-west-2
+  DefaultOrganizationBinding:
+    IncludeMasterAccount: true
+  Parameters:
+    instanceArn: !Ref instanceArn
+    principalId: !Ref adminGroup
+    permissionSetName: 'Administrator'
+    sessionDuration: 'PT1H'
+
+SsoDeveloper:
+  Type: update-stacks
+  Template: ./aws-sso-dev.yml
+  StackName: !Sub '${resourcePrefix}-sso-dev'
+  StackDescription: 'Full permission role used by Developer group within whole organization'
+  TerminationProtection: false
+  DefaultOrganizationBindingRegion: eu-west-2
+  DefaultOrganizationBinding:
+    IncludeMasterAccount: true
+  Parameters:
+    instanceArn: !Ref instanceArn
+    principalId: !Ref devGroup
+    permissionSetName: 'Developer'
+    sessionDuration: 'PT1H'
+
+SsoSecurity:
+  Type: update-stacks
+  Template: ./aws-sso-security.yml
+  StackName: !Sub '${resourcePrefix}-sso-security'
+  StackDescription: 'Full permission role used by Security group within whole organization'
+  TerminationProtection: false
+  DefaultOrganizationBindingRegion: eu-west-2
+  DefaultOrganizationBinding:
+    IncludeMasterAccount: true
+  Parameters:
+    instanceArn: !Ref instanceArn
+    principalId: !Ref securityGroup
+    permissionSetName: 'Security'
+    sessionDuration: 'PT1H'
+
+
+SsoIncidentResponse:
+  Type: update-stacks
+  Template: ./aws-sso-incidentresponse.yml
+  StackName: !Sub '${resourcePrefix}-sso-incidentresponse'
+  StackDescription: 'Incident Response role used to access Production accounts'
+  TerminationProtection: false
+  DefaultOrganizationBindingRegion: eu-west-2
+  DefaultOrganizationBinding:
+    IncludeMasterAccount: true
+  Parameters:
+    instanceArn: !Ref instanceArn
+    principalId: !Ref incidentResponseGroup
+    permissionSetName: 'IncidentResponse'
+    sessionDuration: 'PT1H'
+    resourcePrefix: !Ref resourcePrefix

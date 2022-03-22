@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: '2010-09-09-OC'
+
+Organization: !Include ../organization.yml
+
+OrganizationBindings:    
+  SandboxBinding:
+    OrganizationalUnit: 
+      - !Ref SandboxOU
+    Region: eu-west-2
+    IncludeMasterAccount: false
+  DevBinding:
+    OrganizationalUnit: 
+      - !Ref DevOU
+    Region: eu-west-2
+    IncludeMasterAccount: false
+  ProdBinding:
+    OrganizationalUnit: 
+      - !Ref ProdOU
+    Region: eu-west-2
+    IncludeMasterAccount: false
+
+Parameters:
+
+  instanceArn:
+    Type: String
+
+  principalId:
+    Type: String
+
+  permissionSetName:
+    Type: String
+    Default: Developer
+
+  sessionDuration:
+    Type: String
+    Default: PT1H
+
+Resources:
+
+  DevPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Properties:
+      Name: !Ref permissionSetName
+      Description: !Sub '${permissionSetName} access to AWS organization'
+      InstanceArn: !Ref instanceArn
+      ManagedPolicies: 
+      - arn:aws:iam::aws:policy/ReadOnlyAccess
+      - arn:aws:iam::aws:policy/AWSSupportAccess
+      SessionDuration: !Ref sessionDuration
+      InlinePolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: 'AdminAccessToResources'
+            Effect: Allow
+            Action: "*"
+            Resource: "*"
+            Condition:
+              StringEquals:
+                aws:PrincipalAccount: Fn::EnumTargetAccounts SandboxBinding ${account}
+          - Sid: DeveloperPermissionsPolicy
+            Effect: Allow
+            Action:
+            - account:ListRegions
+            - cloudformation:*
+            - cloudwatch:*
+            - dynamodb:*
+            - iam:Get*
+            - iam:List*
+            - lambda:*
+            - logs:*
+            - organizations:DescribeOrganization
+            - s3:*
+            - sts:*
+            - secretsmanager:*
+            Resource: "*"
+            Condition:
+              StringEquals:
+                aws:PrincipalAccount: Fn::EnumTargetAccounts DevBinding ${account}
+          - Sid: DeleteDetachTagRole
+            Effect: Allow
+            Action:
+              - iam:DeleteRole
+              - iam:DeleteRolePolicy
+              - iam:DetachRolePolicy
+              - iam:TagRole
+              - iam:UntagRole
+            Resource:
+              - arn:aws:iam::*:role/dev-*  
+            Condition:
+              StringEquals:
+                aws:PrincipalAccount: Fn::EnumTargetAccounts DevBinding ${account}
+          - Sid: CreateRoleWithPermissionBoundary
+            Effect: Allow
+            Action:
+            - iam:AttachRolePolicy
+            - iam:CreateRole
+            - iam:PutRolePolicy
+            - iam:PutRolePermissionsBoundary
+            Resource:
+              - arn:aws:iam::*:role/dev-*
+            Condition:
+              StringLike:
+                iam:PermissionsBoundary: !Sub arn:aws:iam::*:policy/dev/dev-permission-boundary-policy
+              StringEquals:
+                aws:PrincipalAccount: Fn::EnumTargetAccounts DevBinding ${account}
+
+
+  DevAssignmentSandbox:
+    Type: AWS::SSO::Assignment
+    Properties:
+      InstanceArn: !Ref instanceArn
+      PermissionSetArn: !GetAtt DevPermissionSet.PermissionSetArn
+      PrincipalId: !Ref principalId
+      PrincipalType: GROUP
+      TargetType: AWS_ACCOUNT
+      TargetId: !GetAtt SandboxAccount1.AccountId
+
+  DevAssignmentDev:
+    Type: AWS::SSO::Assignment
+    Properties:
+      InstanceArn: !Ref instanceArn
+      PermissionSetArn: !GetAtt DevPermissionSet.PermissionSetArn
+      PrincipalId: !Ref principalId
+      PrincipalType: GROUP
+      TargetType: AWS_ACCOUNT
+      TargetId: !GetAtt DevAccount1.AccountId
+
+  DevAssignmentProd:
+    Type: AWS::SSO::Assignment
+    Properties:
+      InstanceArn: !Ref instanceArn
+      PermissionSetArn: !GetAtt DevPermissionSet.PermissionSetArn
+      PrincipalId: !Ref principalId
+      PrincipalType: GROUP
+      TargetType: AWS_ACCOUNT
+      TargetId: !GetAtt ProdAccount1.AccountId

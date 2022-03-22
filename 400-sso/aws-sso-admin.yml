@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09-OC'
+
+Parameters:
+
+  instanceArn:
+    Type: String
+
+  principalId:
+    Type: String
+
+  permissionSetName:
+    Type: String
+    Default: Administrator
+
+  sessionDuration:
+    Type: String
+    Default: PT1H
+
+Resources:
+
+  AdminPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Properties:
+      Name: !Ref permissionSetName
+      Description: !Sub '${permissionSetName} access to AWS organization'
+      InstanceArn: !Ref instanceArn
+      ManagedPolicies: 
+      - arn:aws:iam::aws:policy/AdministratorAccess
+      SessionDuration: !Ref sessionDuration
+
+  AdminAssignment:
+    Type: AWS::SSO::Assignment
+    Properties:
+      InstanceArn: !Ref instanceArn
+      PermissionSetArn: !GetAtt AdminPermissionSet.PermissionSetArn
+      PrincipalId: !Ref principalId
+      PrincipalType: GROUP
+      TargetType: AWS_ACCOUNT
+      TargetId: !GetAtt MasterAccount.AccountId
+
+  AdminBuildAssignment:
+    Type: AWS::SSO::Assignment
+    Properties:
+      InstanceArn: !Ref instanceArn
+      PermissionSetArn: !GetAtt AdminPermissionSet.PermissionSetArn
+      PrincipalId: !Ref principalId
+      PrincipalType: GROUP
+      TargetType: AWS_ACCOUNT
+      TargetId: !GetAtt BuildAccount.AccountId
+
+  AdminDevAssignment:
+    Type: AWS::SSO::Assignment
+    Properties:
+      InstanceArn: !Ref instanceArn
+      PermissionSetArn: !GetAtt AdminPermissionSet.PermissionSetArn
+      PrincipalId: !Ref principalId
+      PrincipalType: GROUP
+      TargetType: AWS_ACCOUNT
+      TargetId: !GetAtt DevAccount1.AccountId

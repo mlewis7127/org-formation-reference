@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09-OC'
+Description: An IAM role which developers can assume that allows access to all AWS services needed to perform development tasks in development accounts
+
+Organization: !Include ../organization.yml
+
+Resources:
+
+  ExamplePermissionBoundaryPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: dev-permission-boundary-policy
+      Description: Permission Boundary example
+      Path: /dev/
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:CreateLogGroup
+              - logs:PutLogEvents
+            Resource:
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:log-stream:*
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
+          - Sid: ExecuteAPI
+            Effect: Allow
+            Action:
+              - execute-api:Invoke
+            Resource: '*'
+          - Sid: S3Permissions
+            Effect: Allow
+            Action:
+              - s3:GetBucketObjectLockConfiguration
+              - s3:GetObject
+              - s3:GetObjectTagging
+              - s3:GetObjectVersion
+              - s3:GetObjectVersionTagging
+              - s3:List*
+              - s3:PutObject
+              - s3:PutObjectTagging
+              - s3:DeleteObject
+            Resource: '*'
+          - Sid: AssumeRolePermission
+            Effect: 'Allow'
+            Action:
+              - sts:AssumeRole
+            Resource: '*'
+          - Sid: CloudwatchPermissions
+            Effect: Allow
+            Action:
+              - cloudwatch:DescribeAlarms
+              - cloudwatch:GetDashboard
+              - cloudwatch:ListDashboards
+            Resource: '*'
+          - Sid: EventBridgePermissions
+            Effect: Allow
+            Action:
+              - events:Describe*
+              - events:Get*
+              - events:List*
+            Resource:
+              - !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/*'
+              - !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/*'

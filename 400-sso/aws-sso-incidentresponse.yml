@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: '2010-09-09-OC'
+
+Parameters:
+
+  instanceArn:
+    Type: String
+
+  principalId:
+    Type: String
+
+  permissionSetName:
+    Type: String
+    Default: IncidentResponse
+
+  sessionDuration:
+    Type: String
+    Default: PT1H
+
+  resourcePrefix:
+    Type: String
+
+OrganizationBindings:
+
+  RoleBinding:
+    OrganizationalUnit: !Ref ProdOU
+    Region: 'eu-west-2'
+
+Resources:
+
+  IncidentResponsePermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Properties:
+      Name: !Ref permissionSetName
+      Description: !Sub '${permissionSetName} access to Production accounts'
+      InstanceArn: !Ref instanceArn
+      SessionDuration: !Ref sessionDuration
+      InlinePolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: 'AccessToElevatedRole'
+            Effect: Allow
+            Action: sts:AssumeRole
+            Resource: Fn::EnumTargetAccounts RoleBinding 'arn:aws:iam::${account}:role/elevated-security-role'
+
+
+  IncidentResponseAssignment:
+    Type: AWS::SSO::Assignment
+    Properties:
+      InstanceArn: !Ref instanceArn
+      PermissionSetArn: !GetAtt IncidentResponsePermissionSet.PermissionSetArn
+      PrincipalId: !Ref principalId
+      PrincipalType: GROUP
+      TargetType: AWS_ACCOUNT
+      TargetId: !GetAtt SecurityAccount.AccountId

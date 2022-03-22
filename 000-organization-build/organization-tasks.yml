@@ -1,0 +1,54 @@
+Parameters:
+  <<: !Include "../organization-parameters.yml"
+
+  resourcePrefix: # overwrite the resource prefix specified in ../organization-parameters
+    Type: String
+    Default: <<resource-prefix>>
+
+OrganizationUpdate:
+  Type: update-organization
+  Template: ../organization.yml
+  TaskRoleName: OrganizationFormationBuildAccessRole
+
+OrganizationBuildPipeline:
+  Type: update-stacks
+  Template: ./org-formation-build.yml
+  StackName: organization-formation-build
+  StackDescription: Organization Formation Build Infrastructure (CodeCommit, CodeBuild and CodePipeline)
+  Parameters:
+    stateBucketName: !Ref stateBucketName
+    resourcePrefix: !Ref resourcePrefix
+    repositoryName: organization-formation
+  DefaultOrganizationBindingRegion: !Ref primaryRegion
+  DefaultOrganizationBinding:
+    Account: !Ref BuildAccount
+
+MasterOrganizationFormationRole:
+  Type: update-stacks
+  DependsOn: OrganizationBuildPipeline
+  Template: ./org-formation-role.yml
+  StackName: organization-formation-role-master
+  StackDescription: Organization Formation Build Infrastructure (IAM Role for cross account access by build process)
+  TerminationProtection: true
+  DefaultOrganizationBindingRegion: !Ref primaryRegion
+  DefaultOrganizationBinding:
+    IncludeMasterAccount: true
+  Parameters:
+    assumeRolePrincipal:  !Ref BuildAccount # you could tighten this up with: !CopyValue [organization-formation-build-role-id, !Ref BuildAccount, !Ref primaryRegion]
+
+OrganizationFormationRole:
+  Type: update-stacks
+  DependsOn: MasterOrganizationFormationRole
+  Template: ./org-formation-role.yml
+  StackName: organization-formation-role
+  StackDescription: Organization Formation Build Infrastructure (IAM Role for cross account access by build process)
+  TerminationProtection: true
+  DefaultOrganizationBindingRegion: !Ref primaryRegion
+  DefaultOrganizationBinding:
+    IncludeMasterAccount: false
+    Account: '*'
+  MaxConcurrentStacks: 10
+  Parameters:
+    assumeRolePrincipal:  !Ref BuildAccount # you could tighten this up with: !CopyValue [organization-formation-build-role-id, !Ref BuildAccount, !Ref primaryRegion]
+  TaskRoleName: !GetAtt CurrentAccount.OrganizationAccessRoleName
+  TaskViaRoleArn: !Sub 'arn:aws:iam::${MasterAccount}:role/OrganizationFormationBuildAccessRole'

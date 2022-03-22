@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: '2010-09-09-OC'
+Description: default template generated for organization with master account 218005740202
+
+Organization:
+  MasterAccount:
+    Type: OC::ORG::MasterAccount
+    Properties:
+      AccountName: MattLewisAWSMgmt
+      AccountId: <<account-id>>
+      RootEmail: <<unique-email-address>>
+
+  OrganizationRoot:
+    Type: OC::ORG::OrganizationRoot
+    Properties:
+      DefaultOrganizationAccessRoleName: OrganizationAccountAccessRole
+      DefaultBuildAccessRoleName: OrganizationFormationBuildAccessRole
+
+####################################
+## Organizational Units           ##
+####################################
+
+  BuildOU:
+    Type: OC::ORG::OrganizationalUnit
+    Properties:
+      OrganizationalUnitName: Build
+      Accounts: 
+        - !Ref BuildAccount
+
+  SecurityOU:
+    Type: OC::ORG::OrganizationalUnit
+    Properties:
+      OrganizationalUnitName: Security
+      Accounts: 
+        - !Ref SecurityAccount
+        - !Ref LogArchiveAccount
+
+  BillingOU:
+    Type: OC::ORG::OrganizationalUnit
+    Properties:
+      OrganizationalUnitName: Billing
+      Accounts: 
+        - !Ref BillingAccount
+
+  SandboxOU:
+    Type: OC::ORG::OrganizationalUnit
+    Properties:
+      OrganizationalUnitName: Sandbox
+      Accounts: 
+        - !Ref SandboxAccount1
+
+  DevOU:
+    Type: OC::ORG::OrganizationalUnit
+    Properties:
+      OrganizationalUnitName: Dev
+      Accounts: 
+        - !Ref DevAccount1
+
+  ProdOU:
+    Type: OC::ORG::OrganizationalUnit
+    Properties:
+      OrganizationalUnitName: Prod
+      Accounts: 
+        - !Ref ProdAccount1
+
+####################################
+## Accounts                       ##
+####################################
+
+  BuildAccount:
+    Type: OC::ORG::Account
+    Properties:
+      AccountName: Build
+      AccountId: <<build-account-id>>
+      RootEmail: <<unique-email-address>>
+
+  SecurityAccount:
+    Type: OC::ORG::Account
+    Properties:
+      AccountName: Security
+      Alias: security-<<resource-prefix>>
+      RootEmail: <<unique-email-address>>
+
+  LogArchiveAccount:
+    Type: OC::ORG::Account
+    Properties:
+      AccountName: LogArchive
+      Alias: log-archive-<<resource-prefix>>
+      RootEmail: <<unique-email-address>>     
+
+  BillingAccount:
+    Type: OC::ORG::Account
+    Properties:
+      AccountName: Billing
+      Alias: billing-<<resource-prefix>>
+      RootEmail: <<unique-email-address>>
+
+  SandboxAccount1:
+    Type: OC::ORG::Account
+    Properties:
+      AccountName: Sandbox1
+      Alias: sandbox-1-<<resource-prefix>>
+      RootEmail: <<unique-email-address>>
+
+  DevAccount1:
+    Type: OC::ORG::Account
+    Properties:
+      AccountName: Dev1
+      Alias: dev-1-<<resource-prefix>>
+      RootEmail: <<unique-email-address>>
+
+  ProdAccount1:
+    Type: OC::ORG::Account
+    Properties:
+      AccountName: Prod1
+      Alias: prod-1-<<resource-prefix>>
+      RootEmail: <<unique-email-address>>

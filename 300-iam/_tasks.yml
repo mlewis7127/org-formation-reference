@@ -1,0 +1,28 @@
+Parameters:
+  <<: !Include '../organization-parameters.yml'
+
+  roleName:
+    Type: String
+    Default: elevated-security-role
+
+CrossAccountRole:
+  Type: update-stacks
+  Template: ./cross-account-role.yml
+  StackName: !Sub '${resourcePrefix}-elevated-role'
+  StackDescription: 'Cross account role for elevation'
+  TerminationProtection: false
+  Parameters:
+    roleName: !Ref roleName
+    resourcePrefix: !Ref resourcePrefix
+
+DevPermissionBoundary:
+  Type: update-stacks
+  Template: ./dev-permission-boundary.yml
+  StackName: !Sub '${resourcePrefix}-permissions-boundary'
+  StackDescription: 'Permissions boundary for dev accounts'
+  TerminationProtection: false
+  DefaultOrganizationBinding: 
+    OrganizationalUnit: 
+      - !Ref DevOU
+    Region: eu-west-2
+    IncludeMasterAccount: false
