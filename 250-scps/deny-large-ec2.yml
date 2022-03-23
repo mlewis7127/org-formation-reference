@@ -1,0 +1,23 @@
+DenyLargeEC2SCP:
+  Type: OC::ORG::ServiceControlPolicy
+  Properties:
+    PolicyName: DenyLargeEC2
+    Description: Deny running EC2 instances larger than 2xlarge
+    PolicyDocument:
+      Version: "2012-10-17"
+      Statement:
+        - Sid: DenyLargerThan4XLarge
+          Effect: Deny
+          Action:
+            - "ec2:RunInstances"
+          Resource: "arn:aws:ec2:*:*:instance/*"
+          Condition:
+            ForAnyValue:StringNotLike:
+              "ec2:InstanceType":
+                - "*.nano"
+                - "*.small"
+                - "*.micro"
+                - "*.medium"
+                - "*.large"
+                - "*.xlarge"
+                - "*.2xlarge"

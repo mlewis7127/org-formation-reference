@@ -14,6 +14,9 @@ Organization:
     Properties:
       DefaultOrganizationAccessRoleName: OrganizationAccountAccessRole
       DefaultBuildAccessRoleName: OrganizationFormationBuildAccessRole
+      ServiceControlPolicies:
+        - !Ref OrgWideManagementControlsSCP
+        - !Ref OrgWideServiceControlsSCP
 
 ####################################
 ## Organizational Units           ##
@@ -23,6 +26,8 @@ Organization:
     Type: OC::ORG::OrganizationalUnit
     Properties:
       OrganizationalUnitName: Build
+      ServiceControlPolicies:
+        - !Ref DenyRootAccessSCP
       Accounts: 
         - !Ref BuildAccount
 
@@ -30,6 +35,8 @@ Organization:
     Type: OC::ORG::OrganizationalUnit
     Properties:
       OrganizationalUnitName: Security
+      ServiceControlPolicies:
+        - !Ref DenyRootAccessSCP
       Accounts: 
         - !Ref SecurityAccount
         - !Ref LogArchiveAccount
@@ -38,6 +45,8 @@ Organization:
     Type: OC::ORG::OrganizationalUnit
     Properties:
       OrganizationalUnitName: Billing
+      ServiceControlPolicies:
+        - !Ref DenyRootAccessSCP
       Accounts: 
         - !Ref BillingAccount
 
@@ -45,6 +54,9 @@ Organization:
     Type: OC::ORG::OrganizationalUnit
     Properties:
       OrganizationalUnitName: Sandbox
+      ServiceControlPolicies:
+        - !Ref DenyRootAccessSCP
+        - !Ref DenyLargeEC2SCP
       Accounts: 
         - !Ref SandboxAccount1
 
@@ -52,6 +64,8 @@ Organization:
     Type: OC::ORG::OrganizationalUnit
     Properties:
       OrganizationalUnitName: Dev
+      ServiceControlPolicies:
+        - !Ref DenyRootAccessSCP
       Accounts: 
         - !Ref DevAccount1
 
@@ -59,6 +73,8 @@ Organization:
     Type: OC::ORG::OrganizationalUnit
     Properties:
       OrganizationalUnitName: Prod
+      ServiceControlPolicies:
+        - !Ref DenyRootAccessSCP
       Accounts: 
         - !Ref ProdAccount1
 
@@ -114,3 +130,13 @@ Organization:
       AccountName: Prod1
       Alias: prod-1-<<resource-prefix>>
       RootEmail: <<unique-email-address>>
+
+
+####################################
+## SCPs                           ##
+####################################
+
+  <<: !Include ./250-scps/deny-root-access.yml
+  <<: !Include ./250-scps/deny-large-ec2.yml
+  <<: !Include ./250-scps/org-wide-management-controls.yml
+  <<: !Include ./250-scps/org-wide-service-controls.yml

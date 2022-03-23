@@ -1,0 +1,18 @@
+DenyRootAccessSCP:
+  Type: OC::ORG::ServiceControlPolicy
+  Properties:
+    PolicyName: RestrictAccessForRoot
+    Description: Deny root user from accessing any resources
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Sid: RestrictAccessForRoot
+          Effect: Deny
+          Action:
+            - '*'
+          Resource:
+            - '*'
+          Condition:
+            StringLike:
+              'aws:PrincipalArn':
+                - 'arn:aws:iam::*:root'

@@ -1,0 +1,49 @@
+# SCP to contain all of the organisation wide management specific constraints
+OrgWideManagementControlsSCP:
+  Type: OC::ORG::ServiceControlPolicy
+  Properties:
+    PolicyName: OrgWideManagementControls
+    Description: Contains statements which enforce organisation wide management constraints
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+      ## Prevent access keys being generated for the root user
+        - Sid: DenyAccessKeyCreationForRootUser
+          Effect: Deny
+          Action: iam:CreateAccessKey
+          Resource:
+            - "*"
+          Condition:
+            StringLike:
+              aws:PrincipalArn:
+                - arn:aws:iam::*:root
+      ## Billing and Account modification
+        - Sid: DenyBillingModification
+          Effect: Deny
+          Action:
+            - aws-portal:ModifyBilling
+            - aws-portal:ModifyPaymentMethods
+          Resource: "*"
+        - Sid: DenyAccountModification
+          Effect: Deny
+          Action:
+            - aws-portal:ModifyAccount
+          Resource: "*"
+      ## Deny change of organisation management role
+        - Sid: DenyChangeOfOrgRole
+          Effect: Deny
+          Action:
+            - 'iam:Attach*'
+            - 'iam:Create*'
+            - 'iam:Delete*'
+            - 'iam:Detach*'
+            - 'iam:PutRole*'
+            - 'iam:Update*'
+          Resource:
+            - 'arn:aws:iam::*:role/OrganizationAccountAccessRole'
+      ## Prevent leaving organization
+        - Sid: PreventLeavingOrganization
+          Effect: Deny
+          Action:
+            - 'organizations:LeaveOrganization'
+          Resource: '*'

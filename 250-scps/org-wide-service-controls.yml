@@ -1,0 +1,87 @@
+OrgWideServiceControlsSCP:
+  Type: OC::ORG::ServiceControlPolicy
+  Properties:
+    PolicyName: OrgWideServiceControls
+    Description: Contains statements which enforce organisation wide service constraints
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Sid: RestrictAccessOnlyToLondonRegion
+          Effect: Deny
+          NotAction:
+            - 'qldb:*'
+            - 'a4b:*'
+            - 'acm:*'
+            - 'access-analyzer:*'
+            - 'aws-marketplace-management:*'
+            - 'aws-marketplace:*'
+            - 'aws-portal:*'
+            - 'budgets:*'
+            - 'ce:*'
+            - 'chime:*'
+            - 'cloudfront:*'
+            - 'config:*'
+            - 'cur:*'
+            - 'directconnect:*'
+            - 'ec2:DescribeRegions'
+            - 'ec2:DescribeTransitGateways'
+            - 'ec2:DescribeVpnGateways'
+            - 'fms:*'
+            - 'globalaccelerator:*'
+            - 'health:*'
+            - 'iam:*'
+            - 'importexport:*'
+            - 'kms:*'
+            - 'mobileanalytics:*'
+            - 'networkmanager:*'
+            - 'organizations:*'
+            - 'pricing:*'
+            - 'route53:*'
+            - 'route53domains:*'
+            - 's3:GetAccountPublic*'
+            - 's3:ListAllMyBuckets'
+            - 's3:PutAccountPublic*'
+            - 'shield:*'
+            - 'sts:*'
+            - 'support:*'
+            - 'trustedadvisor:*'
+            - 'waf-regional:*'
+            - 'waf:*'
+            - 'wafv2:*'
+            - 'wellarchitected:*'
+          Resource: '*'
+          Condition:
+            StringNotEquals:
+              'aws:RequestedRegion':
+                - eu-west-2
+            ArnNotLike:
+              'aws:PrincipalARN':
+                - 'arn:aws:iam::*:role/OrganizationAccountAccessRole'
+        - Sid: DenyCreateInternetGateway
+          Effect: Deny
+          Action:
+            - 'ec2:AttachInternetGateway'
+            - 'ec2:CreateInternetGateway'
+          Resource: '*'
+        - Sid: DenyCreateEgressOnlyInternetGateway
+          Effect: Deny
+          Action:
+            - 'ec2:AttachEgressOnlyInternetGateway'
+          Resource: '*'
+        - Sid: DenyCreateNatGateway
+          Effect: Deny
+          Action:
+            - 'ec2:CreateNatGateway'
+          Resource: '*'
+        - Sid: PreventPublicBuckets
+          Effect: Deny
+          Action:
+            - s3:PutAccountPublicAccessBlock
+          Resource: '*'
+          Condition:
+            StringNotEquals:
+              'aws:RequestedRegion':
+                - eu-west-2
+            ArnNotLike:
+              'aws:PrincipalARN':
+                - 'arn:aws:iam::*:role/OrganizationAccountAccessRole'
