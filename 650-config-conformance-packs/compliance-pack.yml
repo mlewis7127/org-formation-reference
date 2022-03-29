@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  templateURI:
+    Type: String
+
+Resources:
+
+  OrganizationConformancePack:
+    Type: AWS::Config::OrganizationConformancePack
+    Properties:
+        OrganizationConformancePackName: SecurityServices
+        TemplateS3Uri: !Ref templateURI

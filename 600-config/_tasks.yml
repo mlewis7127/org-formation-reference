@@ -1,0 +1,21 @@
+Parameters:
+  <<: !Include '../organization-parameters.yml'
+
+# Enable AWS Config in all member accounts and send Findings and Config history 
+# to the centralized s3 bucket in the log archive account
+ConfigBase:
+  Type: update-stacks
+  Template: ./config.yml
+  StackName: !Sub '${resourcePrefix}-config-inventory'
+  StackDescription: AWS Config - Inventory
+  TerminationProtection: false
+  DefaultOrganizationBindingRegion: !Ref primaryRegion
+  DefaultOrganizationBinding:
+    IncludeMasterAccount: true
+    Account: '*'
+  OrganizationBindings:
+    LogArchiveBinding:
+      Account: !Ref LogArchiveAccount
+  Parameters:
+    resourcePrefix: !Ref resourcePrefix
+    bucketName: !Sub '${resourcePrefix}-config-${CurrentAccount.AccountId}'

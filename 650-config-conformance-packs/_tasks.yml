@@ -1,0 +1,40 @@
+Parameters:
+  <<: !Include '../organization-parameters.yml'
+
+# bucket that contains the compliance pack template
+ConfigCompliancePackBucket:
+  Type: update-stacks
+  Template: ./compliance-pack-bucket.yml
+  StackName: !Sub '${resourcePrefix}-conformance-pack-bucket'
+  StackDescription: Config Compliance Pack bucket
+  DefaultOrganizationBindingRegion: !Ref primaryRegion
+  DefaultOrganizationBinding:
+    IncludeMasterAccount: true
+    Region: eu-west-2
+  TerminationProtection: true
+  Parameters:
+    resourcePrefix: !Ref resourcePrefix
+    bucketName: !Sub '${resourcePrefix}-conformance-pack'
+
+CopyToS3:
+  Type: copy-to-s3
+  DependsOn: ConfigCompliancePackBucket
+  LocalPath: ./Operational-Best-Practices-for-Security-Services.yml
+  RemotePath: !Sub 's3://${resourcePrefix}-conformance-pack/security-services.yml'
+  OrganizationBinding:
+    IncludeMasterAccount: true
+    Region: eu-west-2
+
+ApplyCompliancePack:
+  Type: update-stacks
+  DependsOn: CopyToS3
+  Template: ./compliance-pack.yml
+  StackName: !Sub '${resourcePrefix}-conformance-pack'
+  StackDescription: Apply Config Compliance Pack
+  DefaultOrganizationBindingRegion: !Ref primaryRegion
+  DefaultOrganizationBinding:
+    IncludeMasterAccount: true
+    Region: eu-west-2
+  TerminationProtection: true
+  Parameters:
+    templateURI: !Sub 's3://${resourcePrefix}-conformance-pack/security-services.yml'

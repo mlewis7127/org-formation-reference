@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: '2010-09-09-OC'
+
+# Include file that contains Organization Section.
+# The Organization Section describes Accounts, Organizational Units, etc.
+Organization: !Include ../organization.yml
+
+# Any Binding that does not explicitly specify a region will default to this.
+# Value can be either string or list
+DefaultOrganizationBindingRegion: eu-west-2
+DefaultOrganizationBinding:
+  Account: !Ref SecurityAccount
+
+# Section contains a named set of Bindings.
+# Bindings determine what resources are deployed where
+# These bindings can be !Ref'd from the Resources in the resource section
+OrganizationBindings:
+
+  # Binding for: Detector (needs to be MasterAccount + MemberAccounts)
+  GuardDutyAllBinding:
+    Account: '*'
+    IncludeMasterAccount: true
+
+  # Binding for: Master
+  GuardDutyMemberBinding:
+    Account: '*'
+    IncludeMasterAccount: true
+    ExcludeAccount:
+      - !Ref SecurityAccount
+
+  # Binding for: Member, FindingRule, FindingTopic, FindingTopicPolicy
+  GuardDutyMasterBinding:
+    Account: !Ref SecurityAccount
+
+Parameters:
+
+  resourcePrefix:
+    Type: String
+
+  findingSubscriptionProtocol:
+    Type: String
+    Default: email
+
+  findingSubscriptionEndpoint:
+    Type: String
+    Default: !GetAtt AWSAccount.RootEmail
+
+Resources:
+
+  Detector:
+    Type: AWS::GuardDuty::Detector
+    OrganizationBinding: !Ref GuardDutyAllBinding
+    Properties:
+      Enable: true
+      FindingPublishingFrequency: FIFTEEN_MINUTES
+
+  Master:
+    DependsOnAccount: !Ref SecurityAccount
+    Type: AWS::GuardDuty::Master
+    OrganizationBinding: !Ref GuardDutyMemberBinding
+    Properties:
+      DetectorId: !Ref Detector
+      MasterId: !Ref SecurityAccount
+
+  Member:
+    Type: AWS::GuardDuty::Member
+    OrganizationBinding: !Ref GuardDutyMasterBinding
+    ForeachAccount: !Ref GuardDutyMemberBinding
+    Properties:
+      DetectorId: !Ref Detector
+      Email: !GetAtt CurrentAccount.RootEmail
+      MemberId: !Ref CurrentAccount
+      Status: Invited
+      DisableEmailNotification: true
+
+  FindingRule:
+    Type: AWS::Events::Rule
+    DependsOn: FindingsTopicPolicy
+    OrganizationBinding: !Ref GuardDutyMasterBinding
+    Properties:
+      Name: !Sub '${resourcePrefix}-guardduty-findings-rule'
+      EventPattern:
+        source:
+          - aws.guardduty
+        detail:
+          type: 
+            - UnauthorizedAccess:EC2/MaliciousIPCaller.Custom
+      Targets:
+        - Id: FindingsTopic
+          Arn: !Ref FindingsTopic
+      State: ENABLED
+
+
+  FindingsTopic:
+    Type: AWS::SNS::Topic
+    OrganizationBinding: !Ref GuardDutyMasterBinding
+    Properties:
+      DisplayName: GuardDuty Findings
+      TopicName: !Sub '${resourcePrefix}-guardduty-findings-notification'
+      Subscription:
+        - Protocol: !Ref findingSubscriptionProtocol
+          Endpoint: !Ref findingSubscriptionEndpoint
+
+  FindingsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    OrganizationBinding: !Ref GuardDutyMasterBinding
+    Properties:
+      Topics:
+        - !Ref FindingsTopic
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowEventsPublish
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref FindingsTopic

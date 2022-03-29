@@ -1,0 +1,189 @@
+AWSTemplateFormatVersion: '2010-09-09-OC'
+Description: Organisation CloudTrail configuration
+
+# Include file that contains Organization Section.
+# The Organization Section describes Accounts, Organizational Units, etc.
+Organization: !Include ../organization.yml
+
+DefaultOrganizationBindingRegion: eu-west-2
+DefaultOrganizationBinding:
+  Account: '*'
+  IncludeMasterAccount: true
+
+OrganizationBindings:
+  OrgTrailBinding:
+    IncludeMasterAccount: true
+
+Parameters:
+
+  orgBucketName:
+    Type: String
+
+  resourcePrefix:
+    Type: String
+
+  organizationId:
+    Type: String
+
+  trailName:
+    Type: String  
+
+  logGroupName:
+    Type: String
+
+  logDeletionDays:
+    Type: Number
+    Default: 180
+
+  alarmSubscriptionProtocol:
+    Type: String
+    AllowedValues: [ 'email', 'https' ]
+    Default: email
+
+  alarmSubscriptionEndpoint:
+    Type: String
+    Default: !GetAtt MasterAccount.RootEmail
+
+Resources:
+
+  OrgTrailBucket:
+    OrganizationBinding: !Ref OrgTrailBinding
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Ref orgBucketName
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - ExpirationInDays: !Ref logDeletionDays
+            Id: 'orgtrail-bucket-lifecycle-configuration'
+            Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+
+  OrgTrailBucketPolicy:
+    OrganizationBinding: !Ref OrgTrailBinding
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref OrgTrailBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AWSCloudTrailAclCheck
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource: !GetAtt OrgTrailBucket.Arn
+          - Sid: AWSCloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource: 
+              - !Sub '${OrgTrailBucket.Arn}/AWSLogs/${AWS::AccountId}/*'
+              - !Sub '${OrgTrailBucket.Arn}/AWSLogs/${organizationId}/*'
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
+                AWS:SourceArn: !Sub 'arn:aws:cloudtrail:eu-west-2:${AWS::AccountId}:trail/${trailName}'
+
+  OrgTrailLogGroup:
+    OrganizationBinding: !Ref OrgTrailBinding
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      RetentionInDays: 7
+      LogGroupName: !Ref logGroupName
+
+  OrgTrailLogGroupRole:
+    OrganizationBinding: !Ref OrgTrailBinding
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: orgtrail-publish-to-cloudwatch-log-group
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: AssumeRole1
+          Effect: Allow
+          Principal:
+            Service: 'cloudtrail.amazonaws.com'
+          Action: 'sts:AssumeRole'
+      Policies:
+      - PolicyName: 'cloudtrail-policy'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Sid: AWSOrgTrailCreateLogStream
+            Effect: Allow
+            Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource:
+              - !Sub 'arn:aws:logs:eu-west-2:${AWS::AccountId}:log-group:${logGroupName}:log-stream:${AWS::AccountId}_CloudTrail_eu-west-2*'
+              - !Sub 'arn:aws:logs:eu-west-2:${AWS::AccountId}:log-group:${logGroupName}:log-stream:${organizationId}_*'
+
+  OrgTrail:
+    OrganizationBinding: !Ref OrgTrailBinding
+    Type: AWS::CloudTrail::Trail
+    DependsOn:
+      - OrgTrailBucketPolicy
+      - OrgTrailLogGroup
+      - OrgTrailLogGroupRole
+    Properties:
+      CloudWatchLogsLogGroupArn: !GetAtt 'OrgTrailLogGroup.Arn'
+      CloudWatchLogsRoleArn: !GetAtt 'OrgTrailLogGroupRole.Arn'
+      EnableLogFileValidation: true
+      IncludeGlobalServiceEvents: true
+      IsLogging: true
+      IsMultiRegionTrail: true
+      IsOrganizationTrail: true
+      S3BucketName: !Ref OrgTrailBucket
+      TrailName: !Ref trailName
+
+  RoleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    OrganizationBinding: !Ref OrgTrailBinding
+    Properties:
+      AlarmName: 'Security switched to Elevated Role in Prod'
+      AlarmDescription: 'Alarm on usage of elevated role in the Prod account'
+      MetricName: !Sub '${resourcePrefix}-switch-elevated-count'
+      Namespace: OrgTrailMetrics
+      Statistic: Sum
+      Period: 10
+      EvaluationPeriods: 1
+      Threshold: 1
+      TreatMissingData: notBreaching
+      AlarmActions:
+      - !Ref AlarmNotificationTopic
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+
+  ProductionSupportRoleLoginsFilter:
+    Type: AWS::Logs::MetricFilter
+    OrganizationBinding: !Ref OrgTrailBinding
+    Properties:
+      LogGroupName: OrgTrail/org-audit-log
+      FilterPattern: '{($.eventName = "SwitchRole") && ($.userIdentity.arn = "arn:aws:sts::*:assumed-role/elevated-security-role/*") }'
+      MetricTransformations:
+      - MetricValue: '1'
+        MetricNamespace: OrgTrailMetrics
+        MetricName: !Sub '${resourcePrefix}-switch-elevated-count'
+
+  AlarmNotificationTopic:
+    Type: AWS::SNS::Topic
+    OrganizationBinding: !Ref OrgTrailBinding
+    Properties:
+      DisplayName: !Sub 'Notifies when alarm on usage of elevated role goes off'
+      TopicName: !Sub '${resourcePrefix}-switch-elevatedrole-alarm-notification'
+      Subscription:
+        - Endpoint: !Ref alarmSubscriptionEndpoint
+          Protocol: !Ref alarmSubscriptionProtocol

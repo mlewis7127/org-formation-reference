@@ -1,0 +1,13 @@
+Parameters:
+  <<: !Include '../organization-parameters.yml'
+
+GuardDuty:
+  Type: update-stacks
+  Template: ./guardduty.yml
+  StackName: !Sub '${resourcePrefix}-guardduty-baseline'
+  StackDescription: GuardDuty - Base
+  TerminationProtection: true
+  Parameters:
+    resourcePrefix: !Ref resourcePrefix
+
+

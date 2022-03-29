@@ -1,0 +1,22 @@
+Parameters:
+  <<: !Include '../organization-parameters.yml'
+
+CloudTrail:
+  Type: update-stacks
+  Template: ./cloudtrail.yml
+  StackName: !Sub '${resourcePrefix}-cloudtrail'
+  StackDescription: Enable logs forward to a centralised log archive account in the security OU
+  DefaultOrganizationBindingRegion: !Ref primaryRegion
+  DefaultOrganizationBinding:
+    Account: '*'
+    IncludeMasterAccount: true
+  OrganizationBindings:
+    OrgTrailBinding:
+      IncludeMasterAccount: true
+  TerminationProtection: true
+  Parameters:
+    orgBucketName: !Sub '${resourcePrefix}-orgtrail-${CurrentAccount.AccountId}'
+    resourcePrefix: !Ref resourcePrefix
+    organizationId: !Ref organizationId
+    trailName: central-orgtrail
+    logGroupName: OrgTrail/org-audit-log

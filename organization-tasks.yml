@@ -34,6 +34,31 @@ AWSSSO:
   DependsOn: [ OrganizationBuild, ElevatedRole ]
   Path: ./400-sso/_tasks.yml
 
+CloudTrail:
+  Type: include
+  DependsOn: [ OrganizationBuild, ElevatedRole ]
+  Path: ./500-cloudtrail/_tasks.yml
+
+AwsConfigInventory:
+  Type: include
+  DependsOn: [ OrganizationBuild ]
+  Path: ./600-config/_tasks.yml
+
+AwsConfigRules:
+  Type: include
+  DependsOn: [ OrganizationBuild, AwsConfigInventory ]
+  Path: ./610-config-custom-rules/_tasks.yml
+
+AwsCompliancePack:
+  Type: include
+  DependsOn: [ AwsConfigRules ]
+  Path: ./650-config-conformance-packs/_tasks.yml
+
+GuardDuty:
+  Type: include
+  DependsOn: [ OrganizationBuild ]
+  Path: ./700-guardduty/_tasks.yml
+
 # # this feature will depend on the OrganizationBuild task.
 # MyFeature:
 #   Type: include

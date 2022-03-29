@@ -12,6 +12,10 @@ allRegions:
     - eu-west-2
     # - us-east-1
 
+organizationId:
+  Type: String
+  Default: <<orgId>>
+
 stateBucketName:
   Type: String
   Default: organization-formation-525565668088

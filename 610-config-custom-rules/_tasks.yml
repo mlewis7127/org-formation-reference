@@ -1,0 +1,9 @@
+Parameters:
+
+DeveloperPolicy:
+  Type: update-stacks
+  StackName: aws-config-managed-rule
+  Template: ./managed-config-rule.yml
+  DefaultOrganizationBinding: 
+    IncludeMasterAccount: true
+    Region: eu-west-2

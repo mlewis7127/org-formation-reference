@@ -47,13 +47,3 @@ Resources:
       PrincipalType: GROUP
       TargetType: AWS_ACCOUNT
       TargetId: !GetAtt BuildAccount.AccountId
-
-  AdminDevAssignment:
-    Type: AWS::SSO::Assignment
-    Properties:
-      InstanceArn: !Ref instanceArn
-      PermissionSetArn: !GetAtt AdminPermissionSet.PermissionSetArn
-      PrincipalId: !Ref principalId
-      PrincipalType: GROUP
-      TargetType: AWS_ACCOUNT
-      TargetId: !GetAtt DevAccount1.AccountId

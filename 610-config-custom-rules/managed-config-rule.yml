@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: '2010-09-09-OC'
+Description: An example to show deploying a managed AWS Config Rule
+
+Organization: !Include ../organization.yml
+OrganizationBindings:    
+  DefaultOrganizationBinding: 
+    IncludeMasterAccount: true
+    Region: eu-west-2
+
+Resources:
+
+  SSHOrganizationConfigRule:
+    Type: "AWS::Config::OrganizationConfigRule"
+    Properties:
+      OrganizationConfigRuleName: "OrganizationRestrictedSSH"
+      OrganizationManagedRuleMetadata:
+        RuleIdentifier: "INCOMING_SSH_DISABLED"
+        Description: "restricted-ssh"
