@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09-OC'
+
+Organization: !Include ../organization.yml
+
+# Any Binding that does not explicitly specify a region will default to this.
+# Value can be either string or list
+DefaultOrganizationBindingRegion: eu-west-2
+DefaultOrganizationBinding:
+  IncludeMasterAccount: true
+  Account: '*'
+
+# Section contains a named set of Bindings.
+# Bindings determine what resources are deployed where
+# These bindings can be !Ref'd from the Resources in the resource section
+OrganizationBindings:
+
+  SecurityBinding:
+    Account: !Ref SecurityAccount
+
+Parameters:
+  resourcePrefix:
+    Type: String
+
+  aggregatorRegion:
+    Type: String
+    Default: eu-west-2
+    Description: AWS region of the aggregator
+
+Resources:
+
+  ConfigAggregatorRole:
+    Type: AWS::IAM::Role
+    OrganizationBinding: !Ref SecurityBinding
+    Properties:
+      RoleName: !Sub '${resourcePrefix}-configaggregator-role'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: config.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSConfigRoleForOrganizations'
+
+  ConfigAggregator:
+    Type: AWS::Config::ConfigurationAggregator
+    OrganizationBinding: !Ref SecurityBinding
+    DependsOn: ConfigAggregatorRole
+    Properties:
+      OrganizationAggregationSource:
+        RoleArn: !GetAtt ConfigAggregatorRole.Arn
+        AwsRegions:
+          - !Ref aggregatorRegion
+        AllAwsRegions: false
+      ConfigurationAggregatorName: OrgConfigAggregator

@@ -1,0 +1,13 @@
+Parameters:
+  <<: !Include '../organization-parameters.yml'
+
+# Enable AWS Config in all member accounts and send Findings and Config history 
+# to the centralized s3 bucket in the log archive account
+ConfigBase:
+  Type: update-stacks
+  Template: ./config-aggregator.yml
+  StackName: !Sub '${resourcePrefix}-config-aggregator'
+  StackDescription: AWS Config - Aggregator
+  TerminationProtection: false
+  Parameters:
+    resourcePrefix: !Ref resourcePrefix

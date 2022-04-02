@@ -54,6 +54,11 @@ AwsCompliancePack:
   DependsOn: [ AwsConfigRules ]
   Path: ./650-config-conformance-packs/_tasks.yml
 
+AwsConfigAggregator:
+  Type: include
+  DependsOn: [ AwsConfigRules ]
+  Path: ./670-config-aggregator/_tasks.yml
+
 GuardDuty:
   Type: include
   DependsOn: [ OrganizationBuild ]
